@@ -15,10 +15,29 @@
  */
 package sage.plugin;
 
-import sage.*;
-import javax.xml.parsers.*;
-import org.xml.sax.*;
-import org.xml.sax.helpers.*;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.xml.parsers.SAXParserFactory;
+
+import org.xml.sax.Attributes;
+import org.xml.sax.SAXException;
+import org.xml.sax.helpers.DefaultHandler;
+
+import sage.EPG;
+import sage.FileDownloader;
+import sage.IOUtils;
+import sage.MediaFile;
+import sage.MetaImage;
+import sage.Pooler;
+import sage.Sage;
+import sage.SageProperties;
+import sage.SageTV;
+import sage.SageTVPlugin;
+import sage.SageTVPluginRegistry;
+import sage.UIClient;
+import sage.UIManager;
+import sage.Version;
 
 /**
  * This class is responsible for managing the currently active plugins in the system
@@ -2545,8 +2564,12 @@ public class CorePluginManager implements Runnable
     private PluginWrapper.Dependency currDependency;
     private PluginWrapper.Package currPackage;
     private boolean osRestrictions;
+    private List<String> jars;
+    private boolean jarsActive = false;
+    
     public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException
     {
+    	
       if ("PluginRepository".equalsIgnoreCase(qName))
       {
         if (attributes != null)
@@ -2570,6 +2593,11 @@ public class CorePluginManager implements Runnable
       else if ("Dependency".equalsIgnoreCase(qName))
       {
         currDependency = new PluginWrapper.Dependency();
+      }
+      else if ("Jars".equalsIgnoreCase(qName))
+      {
+    	jars = new ArrayList<String>();
+    	jarsActive = true;
       }
       else if ("Package".equalsIgnoreCase(qName))
       {
@@ -2639,6 +2667,13 @@ public class CorePluginManager implements Runnable
           currDependency.maxVersion = data;
         }
       }
+      else if (jarsActive) 
+      {
+    	  if("Jars".equalsIgnoreCase(qName))
+    		  jarsActive = false;
+    	  else if ("Jar".equalsIgnoreCase(qName))
+    		  jars.add(data);
+      }
       else if (currPackage != null)
       {
         if ("Package".equalsIgnoreCase(qName))
@@ -2674,6 +2709,12 @@ public class CorePluginManager implements Runnable
           PluginWrapper verTest = (PluginWrapper) latestRepoPluginsTemp.get(currPlugin.getId());
           if (verTest == null || compareVersions(verTest.getVersion(), currPlugin.getVersion()) < 0)
             latestRepoPluginsTemp.put(currPlugin.getId(), currPlugin);
+          // db: Generate the jar builder for this plugin
+          if(jars != null) {
+        	  if(jars.size() > 0)
+        		  new PluginJarBuilder(currPlugin.getId(), jars);
+        	  jars = null;
+          }          
           currPlugin = null;
         }
         else if ("Name".equalsIgnoreCase(qName))
