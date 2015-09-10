@@ -15,6 +15,7 @@
  */
 package sage.plugin;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -89,6 +90,9 @@ public class CorePluginManager implements Runnable
 
   private static CorePluginManager chosenOne;
   private static Object singletonLock = new Object();
+  
+  public static final File JAR_STAGE_ROOT = new File(new File(System.getProperty("user.dir")), "jar_staging");
+  
   public static CorePluginManager getInstance()
   {
     if (chosenOne == null)
@@ -1561,8 +1565,8 @@ public class CorePluginManager implements Runnable
       stagedDeleteFile.delete();
     if (stagedRenameFile.length() == 0)
       stagedRenameFile.delete();
-
-    return needRestart ? "RESTART" : "OK";
+    new Thread(new GradleSettingsBuilder()).start();
+    return isRestartNeeded(pluginID) ? "RESTART" : "OK";
   }
 
   // This checks to make sure all the files that were supposed to be installed for the plugin still exist
@@ -2180,7 +2184,8 @@ public class CorePluginManager implements Runnable
     if (Sage.DBG) System.out.println("DONE with plugin installation for " + plug.getId() + " " + plug.getVersion());
     if (Sage.DBG && !pendingFilesystem.isEmpty()) System.out.println("Pending filesystem MD5 state: " + pendingFilesystem);
     progressMsg = "";
-    return needRestart ? "RESTART" : "OK";
+    new Thread(new GradleSettingsBuilder()).start();
+    return isRestartNeeded(plug.getId()) ? "RESTART" : "OK";
   }
 
   private boolean canModifyPath(java.io.File f)
@@ -2524,6 +2529,10 @@ public class CorePluginManager implements Runnable
   {
     return needRestart;
   }
+  
+  public boolean isRestartNeeded(String moddedPluginId) {
+	  return needRestart || new File(CorePluginManager.JAR_STAGE_ROOT, moddedPluginId).isDirectory();
+  }
 
   public String getPluginProgress()
   {
@@ -2566,6 +2575,7 @@ public class CorePluginManager implements Runnable
     private boolean osRestrictions;
     private List<String> jars;
     private boolean jarsActive = false;
+    private boolean activeJarNoTrans;
     
     public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException
     {
@@ -2598,6 +2608,10 @@ public class CorePluginManager implements Runnable
       {
     	jars = new ArrayList<String>();
     	jarsActive = true;
+      }
+      else if ("Jar".equalsIgnoreCase(qName))
+      {
+    	  activeJarNoTrans = Boolean.parseBoolean(attributes.getValue("notransitive"));
       }
       else if ("Package".equalsIgnoreCase(qName))
       {
@@ -2712,7 +2726,7 @@ public class CorePluginManager implements Runnable
           // db: Generate the jar builder for this plugin
           if(jars != null) {
         	  if(jars.size() > 0)
-        		  new PluginJarBuilder(currPlugin.getId(), jars);
+        		  new PluginJarBuilder(currPlugin.getId(), jars, activeJarNoTrans);
         	  jars = null;
           }          
           currPlugin = null;
