@@ -31,8 +31,7 @@ mkdir ubuntuserver
 cp -R ubuntufiles/server/* ubuntuserver/
 mkdir ubuntuserver/opt
 mkdir ubuntuserver/opt/sagetv
-mkdir ubuntuserver/opt/sagetv/server
-cp -R serverrelease/* ubuntuserver/opt/sagetv/server/
+cp -R serverrelease ubuntuserver/opt/sagetv/server
 chmod -R 755 ubuntuserver
 sed -i "s/MAJOR_VERSION/$MAJOR_VERSION/g" ubuntuserver/DEBIAN/control
 sed -i "s/MINOR_VERSION/$MINOR_VERSION/g" ubuntuserver/DEBIAN/control

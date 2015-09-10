@@ -34,15 +34,44 @@ while [ $restartApp -eq 1 ]; do
 	restartApp=0
 	if [ -e stageddeletes.txt ] || [ -e stagedrenames.txt ] ; then
 		java -cp Sage.jar sage.plugin.StageCleaner
+		# Unlikely, but not impossible that this can fail, so bail on the startup if it does
+		if [[ "$?" != "0" ]]; then
+			echo "FAIL: StageCleaner has failed!"
+			exit 1
+		fi
 	fi
-	for i in presage??* ;
-	do
-	if [ -f "$i" ] ; then
-	    ./$i
+	
+	cd .jarstager
+	./gradlew -q stage
+	if [[ "$?" != "0" ]]; then
+		echo "FAIL: Jar build has failed!"
+		exit 1
 	fi
+	cd ..
+	
+	java -cp Sage.jar sage.plugin.JarStager
+	if [[ "$?" != "0" ]]; then
+		echo "FAIL: JarStager has failed!"
+		exit 1
+	fi
+	
+	for i in presage??*; do
+		if [[ -f "$i" && -x "$i" ]]; then
+			echo "Pre: $i"
+	    	./$i
+	    	# Halt startup if a prescript fails
+	    	if [[ "$?" != "0" ]]; then
+	    		echo "Prescript $i has failed!"
+	    		exit 1
+	    	fi
+		fi
 	done
 	echo Starting server mode
-	java -Djava.awt.headless=$HEADLESS $JAVAMEM -XX:+UseAdaptiveSizePolicy -XX:MaxGCPauseMillis=25 -XX:GCTimeRatio=24 -XX:ThreadPriorityPolicy=1 $JAVAOPTS -cp Sage.jar:.:/:$(echo JARs/*.jar | sed 's/  */:/g') sage.Sage 0 0 x "sagetv Sage.properties" <&- &
+	classpath="./Sage.jar:."
+	for j in JARs/*.jar; do
+		classpath="$classpath:$j"
+	done
+	java -Djava.awt.headless=$HEADLESS $JAVAMEM -XX:+UseAdaptiveSizePolicy -XX:MaxGCPauseMillis=25 -XX:GCTimeRatio=24 -XX:ThreadPriorityPolicy=1 $JAVAOPTS -cp "$classpath" sage.Sage 0 0 x "sagetv Sage.properties" <&- &
 	javapid=$!
 	echo -n $javapid > $PIDFILE
 	wait $javapid

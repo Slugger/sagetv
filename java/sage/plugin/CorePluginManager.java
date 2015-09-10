@@ -91,7 +91,7 @@ public class CorePluginManager implements Runnable
   private static CorePluginManager chosenOne;
   private static Object singletonLock = new Object();
   
-  public static final File JAR_STAGE_ROOT = new File(new File(System.getProperty("user.dir")), "jar_staging");
+  public static final File JAR_STAGE_ROOT = new File(new File(System.getProperty("user.dir")), ".jarstager");
   
   public static CorePluginManager getInstance()
   {

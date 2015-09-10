@@ -1,0 +1,42 @@
+allprojects {
+  repositories {
+    mavenCentral()
+    jcenter()
+    maven {
+      url 'https://dl.bintray.com/slugger/sage-oss-plugins'
+    }
+  }
+}
+
+subprojects {
+  configurations {
+    plugin
+  }
+
+  task listDeps(type: DependencyReportTask) {}
+}
+
+configurations {
+  appPlugins {
+//    resolutionStrategy.failOnVersionConflict()
+  }
+}
+
+subprojects {
+  task loadDeps << {
+    project.configurations.plugin.allDependencies.each { dep ->
+      rootProject.dependencies {
+        appPlugins dep
+      }
+    }
+  }
+}
+
+task stage(dependsOn: subprojects.loadDeps) << {
+  def root = new File(project.projectDir, '.sagejars')
+  root.deleteDir()
+  copy {
+    from configurations.appPlugins
+    into root 
+  }
+}

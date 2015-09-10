@@ -17,9 +17,8 @@
 # Copy all the files needed for the server into the
 # serverrelease folder
 rm -rf serverrelease
-mkdir serverrelease
+cp -R serverfiles ./serverrelease
 cp release/Sage.jar ./serverrelease/
-cp -R serverfiles/* ./serverrelease/
 cp so/*.so ./serverrelease/
 rm serverrelease/libSageX11.so
 cp so/libav* ./serverrelease/
@@ -38,8 +37,3 @@ mkdir ./serverrelease/fonts
 cp -R ../third_party/DejaVuFonts/*.ttf ./serverrelease/fonts/
 cp ../install/config/*.frq ./serverrelease/
 mkdir ./serverrelease/JARs
-cp ../third_party/JCIFS/*.jar ./serverrelease/JARs/
-cp ../third_party/Oracle/*.jar ./serverrelease/JARs/
-cp ../third_party/Apache/*.jar ./serverrelease/JARs/
-cp ../third_party/UPnPLib/*.jar ./serverrelease/JARs/
-cp ../third_party/Lucene/*.jar ./serverrelease/JARs/
